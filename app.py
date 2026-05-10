@@ -1,5 +1,5 @@
 import streamlit as st
-from scripts.run_script import run_query
+from run_script import run_query
 
 st.set_page_config(layout="wide")
 
