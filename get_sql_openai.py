@@ -1,150 +1,23 @@
 from dotenv import load_dotenv
 from openai import OpenAI
 from validations import validate_sql
+from prompts import system_prompt, reinforncement_prompt
+import logging
+
 load_dotenv()
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 client = OpenAI()
 
+system_prompt = system_prompt
 
 def ask_chatgpt(user_question):
-
-    system_prompt = """
-        You are a SQL generator for a conversational BI system.
-
-        Database table: public.customer_table
-
-        Schema:
-        record_date DATE
-        - Date the transaction or purchase was recorded.
-
-        customer_id VARCHAR
-        - Unique identifier for each customer.
-        - Example: C001
-
-        customer_name VARCHAR
-        - Full name of the customer.
-        - Example: Ama Mensah
-
-        age INTEGER
-        - Customer age.
-        - Example: 28
-
-        gender VARCHAR
-        - Customer gender.
-        - Values:
-        - M = Male
-        - F = Female
-
-        city VARCHAR
-        - Customer city location.
-        - Example values:
-        - Accra
-        - Kumasi
-        - Takoradi
-
-        state VARCHAR
-        - Customer region/state in Ghana.
-        - IMPORTANT:
-        - Values do NOT contain the word "Region".
-        - Example:
-            "Greater Accra"
-            NOT "Greater Accra Region"
-
-        - Example values:
-        - Greater Accra
-        - Ashanti
-        - Western
-        - Northern
-        - Volta
-        - Eastern
-        - Central
-
-        country VARCHAR
-        - Country name.
-        - Example:
-        - Ghana
-
-        segment VARCHAR
-        - Customer/business segment classification.
-
-        - Example values:
-        - Retail
-        - SME
-        - Corporate
-        - Wholesale
-
-        product_category VARCHAR
-        - Product or service category purchased.
-
-        - Example values:
-        - Airtime
-        - Data Bundle
-        - Bulk SMS
-        - Broadband
-        - Voice Package
-
-        quantity_purchased INTEGER
-        - Quantity of product/service purchased.
-
-        - Example:
-        - 2
-        - 5
-        - 120
-
-        unit_price NUMERIC
-        - Price per single unit purchased.
-
-        - Example:
-        - 10
-        - 2
-        - 0.05
-
-        total_revenue NUMERIC
-        - Total revenue generated from the transaction.
-        - Usually:
-        quantity_purchased times unit_price
-
-        payment_method VARCHAR
-        - Payment method used by the customer.
-
-        - Example values:
-        - Mobile Money
-        - Card
-        - Invoice
-        - Cash
-        - Bank Transfer
-
-        orders_count INTEGER
-        - Number of orders made by the customer.
-
-        last_purchase_time TIMESTAMP
-        - Timestamp of the customer's latest purchase activity.
-        - Example:
-        - 2026-05-01 08:10:00
-
-
-        SQL Generation Rules:
-
-        1. Output ONLY valid PostgreSQL SQL.
-        2. Never include explanations or markdown.
-        3. Only generate SELECT queries.
-        4. Never generate INSERT, UPDATE, DELETE, DROP, ALTER, CREATE, or TRUNCATE statements.
-        5. Always use public.customer_table.
-        6. Use ONLY the columns provided in the schema.
-        7. Always use ILIKE for text filtering to support case-insensitive searches.
-        8. The state column stores only raw region names without the word "Region".
-        Example:
-        - Correct: 'Greater Accra'
-        - Incorrect: 'Greater Accra Region'
-        9. Use LIMIT 100 unless aggregation or ranking is explicitly requested.
-        10. Never hallucinate column names or tables.
-        11. Prefer readable SQL formatting.
-
-        Intent rules:
-        - If user asks for data, records, customers, or filtering , return row-level SELECT query.
-        - If user asks for totals, averages, counts, top, bottom, ranking, trends , top/bottom performers or summaries, use aggregation functions.
-        - If unclear → default to row-level SELECT query.
-        """
     
     response = client.responses.create(
         model="gpt-4.1-mini",
@@ -164,6 +37,70 @@ def ask_chatgpt(user_question):
     return response.output_text
 
 
-sql_query = ask_chatgpt("How many customers are in Vilta region")
-safe_sql_query = validate_sql(sql_query)
-print(safe_sql_query)
+def ask_chatgpt_validated(user_question: str, max_retries: int = 2) -> str:
+    """Ask the model and validate the SQL. If validation fails due to forbidden
+    keywords or non-SELECT statements, re-prompt the model with a strict
+    instruction to return only a safe SELECT query. Retries up to
+    `max_retries` times before raising the last validation error.
+    """
+    logger.info(f"ask_chatgpt_validated called with user_question: {user_question[:100]}...")
+    logger.info(f"Max retries allowed: {max_retries}")
+
+    def call_model(user_prompt: str) -> str:
+        logger.debug(f"Calling OpenAI model with prompt: {user_prompt[:80]}...")
+        resp = client.responses.create(
+            model="gpt-4.1-mini",
+            temperature=0,
+            input=[
+                {
+                    "role": "system",
+                    "content": system_prompt
+                },
+                {
+                    "role": "user",
+                    "content": user_prompt
+                }
+            ]
+        )
+        generated_sql = resp.output_text
+        logger.info(f"Model generated SQL: {generated_sql}")
+        return generated_sql
+
+    current_prompt = user_question
+    last_error = None
+
+    for attempt in range(max_retries + 1):
+
+        logger.info(f"--- Attempt {attempt + 1}/{max_retries + 1} ---")
+
+        sql = call_model(current_prompt)
+
+        try:
+            logger.info(f"Validating SQL: {sql}")
+
+            validate_sql(sql)
+
+            logger.info("✓ SQL validation passed! Returning safe query.")
+
+            return sql
+        
+        except ValueError as e:
+
+            logger.warning(f"✗ Validation failed: {str(e)}")
+            last_error = e
+
+            if attempt == max_retries:
+                logger.error(f"Max retries ({max_retries}) exceeded. Raising final validation error.")
+                raise
+
+            reinforcement= (
+                reinforncement_prompt,
+                "User request: " + user_question
+            )
+            logger.info(f"Retrying with reinforcement prompt (attempt {attempt + 2}/{max_retries + 1})...")
+
+            current_prompt = reinforcement
+
+
+sql_query = ask_chatgpt_validated("what revenue line is the lowest for customers less than 30 years ")
+print(sql_query)
