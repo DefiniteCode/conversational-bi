@@ -1,0 +1,39 @@
+Column Name,Description
+EVENTDATE,Date the customer record was captured or entered into the dataset. Customer attributes may change daily.
+MSISDN,Unique customer mobile number identifier.
+FORENAMES,Customer’s first and middle names.
+SURNAME,Customer’s surname or last name.
+AGE,Customer’s age in years.
+TERTIARY,Indicates whether the customer is a tertiary student or not.
+SIMSTATE,Current status/state of the customer’s SIM card.
+PREVIOUSSIMSTATE,Previous SIM state before transitioning to the current state.
+LBALANCE1,Customer’s airtime balance.
+ACTIVATIONDATE,Date the customer SIM/account was activated on the network.
+AGE_ON_NETWORK_DAYS,Number of days the customer has been active on the network since activation.
+CELL_NAME,Customer’s home cell name.
+CELL_TYP,"Type of network cell serving the customer (e.g., 2G, 3G, 4G, LTE)."
+SITE_NAME,Name of the network site where the customer’s home cell is located.
+REGION,Administrative region associated with the customer.
+DISTRICT,District associated with the customer.
+ZONE,Commercial zone classification used for reporting and analysis.
+TERRITORY,Territory classification under the zone structure.
+BUSINESSUNIT,"Customer segment classification (e.g., Consumer or Enterprise)."
+MANUFACTURER,Manufacturer/brand of the customer’s handset device.
+HANDSETNAME,Model name of the customer’s handset device.
+HANDSETOS,Operating system running on the customer’s handset.
+HANDSETSEGMENT,"Network capability category of the handset (e.g., 2G, 3G, LTE, 5G supported device)."
+SMARTPHONEINDICATOR,Indicates whether the customer device is a smartphone (Yes/No/Any). “Any” is treated as non-smartphone.
+ATTACHED,Indicates whether the customer was attached/connected to the network on the record date.
+BUNDLE_REV,Total revenue generated from bundle purchases.
+VOICE_BUNDLE_REV,Revenue generated from voice bundles.
+DATA_BUNDLE_REV,Revenue generated from data bundles.
+INT_BUNDLE_REV,Revenue generated from integrated bundles containing both voice and data.
+SMS_BUNDLE_REV,Revenue generated from SMS bundles.
+THIRD_PARTY_REV,Revenue generated from third-party Value Added Services (VAS).
+MT_REV,Revenue generated from MT VAS channels/services.
+SMS_REV,Revenue generated from SMS VAS services.
+CRBT_REV,Revenue generated from Caller Ring Back Tone (CRBT) services.
+VOICE_REV,Pay-as-you-go voice revenue charged directly from airtime balance.
+GPRS_REV,Pay-as-you-go data/browsing revenue charged directly from airtime balance.
+VAS_REV,"Total Value Added Services (VAS) revenue, including Third Party, MT, SMS, and CRBT revenues."
+TOTAL_REV,Total revenue generated from the customer across all revenue streams.
